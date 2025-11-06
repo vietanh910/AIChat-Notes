@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}" data-theme="{{ current_theme }}">
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='folder_improvements.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('app_name') }}</title>
+    <style>
+        .pinned {
+            background-color: rgba(255, 223, 186, 0.2);
+            border-left: 3px solid #ffa500;
+        }
+        .pin-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .pin-btn:hover {
+            opacity: 1;
+        }
+        .pin-btn.active {
+            color: #ffa500;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="{{ url_for('index') }}" class="brand" title="{{ t('tooltip_home') }}">
+            📝 {{ t('app_name') }}
+        </a>
+        <nav class="topnav">
+            <span class="welcome">{{ t('welcome_back') }}, {{ current_user.username }}</span>
+            <button class="btn secondary" onclick="openImportModal()" title="{{ t('import_note') }}">
+                📥 {{ t('import_note') }}
+            </button>
+            <button class="settings-btn" onclick="openSettings()" title="{{ t('settings') }}">
+                ⚙️
+            </button>
+            <a class="btn secondary" href="{{ url_for('logout') }}" title="{{ t('tooltip_logout') }}">
+                {{ t('logout') }}
+            </a>
+        </nav>
+    </header>
+
+    <div class="flash-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <h2>{{ t('folders') }}</h2>
+
+            <!-- Search box for folders -->
+            <div class="folder-search">
+                <span class="folder-search-icon">🔍</span>
+                <input type="text"
+                       class="folder-search-input"
+                       id="folder-search-input"
+                       placeholder="{{ t('search_folders') }}"
+                       value="{{ search_query }}"
+                       oninput="searchFolders(this.value)">
+            </div>
+
+            <!-- Sorting controls for folders -->
+            <div class="sort-controls">
+                <form method="GET" class="sort-form" id="sort-form">
+                    {% if selected_folder %}
+                        <input type="hidden" name="folder_id" value="{{ selected_folder }}">
+                    {% endif %}
+                    {% if search_query %}
+                        <input type="hidden" name="search" value="{{ search_query }}">
+                    {% endif %}
+                    <!-- Preserve note sorting when changing folder sorting -->
+                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                    <input type="hidden" name="sort_order" value="{{ sort_order }}">
+
+                    <div class="sort-group">
+                        <label for="folder-sort-by">{{ t('sort_by') }} folders:</label>
+                        <select name="folder_sort_by" id="folder-sort-by" onchange="this.form.submit()">
+                            <option value="name" {% if folder_sort_by == 'name' %}selected{% endif %}>{{ t('sort_by_name') }}</option>
+                            <option value="date" {% if folder_sort_by == 'date' %}selected{% endif %}>{{ t('sort_by_date') }}</option>
+                        </select>
+                    </div>
+                    <div class="sort-group">
+                        <select name="folder_sort_order" id="folder-sort-order" onchange="this.form.submit()">
+                            <option value="asc" {% if folder_sort_order == 'asc' %}selected{% endif %}>{{ t('sort_order_asc') }}</option>
+                            <option value="desc" {% if folder_sort_order == 'desc' %}selected{% endif %}>{{ t('sort_order_desc') }}</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <form class="add-form" action="{{ url_for('add_folder') }}" method="post">
+                <input type="text" name="name" placeholder="{{ t('new_folder') }}" required class="form-input" />
+                <button type="submit" class="btn" title="{{ t('tooltip_add_folder') }}">+</button>
+            </form>
+            <ul class="folder-list">
+                {% for folder in folders %}
+                <li class="folder-item {% if folder[3] %}pinned{% endif %}" onclick="window.location.href='{{ url_for('index', folder_id=folder[0]) }}'">
+                    <div class="folder-link {% if selected_folder and selected_folder|int == folder[0] %}active{% endif %}"
+                       title="{{ t('note_click_open') }}">
+                       <span class="folder-icon" aria-hidden="true">
+                           📁
+                           <span class="folder-pin-indicator" aria-hidden="true">📌</span>
+                       </span>
+                       <span class="folder-name" title="{{ folder[1] }}">{{ folder[1] }}</span>
+                    </div>
+                    <div class="folder-actions" onclick="event.stopPropagation();">
+                        <button type="button"
+                                class="pin-btn {% if folder[3] %}active{% endif %}"
+                                onclick="event.stopPropagation(); toggleFolderPin({{ folder[0] }}, this)"
+                                title="{{ 'Bỏ ghim thư mục' if folder[3] else 'Ghim thư mục' }}">
+                            📌
+                        </button>
+                        <form action="{{ url_for('delete_folder', folder_id=folder[0]) }}" method="post" style="display: inline;">
+                            <button type="submit" class="btn small danger"
+                                    onclick="return confirm('{{ t('delete_confirm_folder') }}')"
+                                    title="{{ t('tooltip_delete_folder') }}">🗑️</button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </aside>
+
+        <main class="main">
+            <div class="main-header">
+                {% if selected_folder %}
+                    <div class="folder-edit-header">
+                        <form action="{{ url_for('edit_folder', folder_id=selected_folder) }}" method="post" class="folder-edit-form">
+                            <input type="text" name="name"
+                                   value="{{ folders|selectattr('0', 'equalto', selected_folder|int)|map(attribute='1')|first }}"
+                                   class="folder-edit-input"
+                                   placeholder="Tên folder..."
+                                   onblur="this.form.submit()"
+                                   onkeypress="if(event.key==='Enter') this.form.submit()">
+                        </form>
+                        <div class="folder-actions-main">
+                            <form action="{{ url_for('delete_folder', folder_id=selected_folder) }}" method="post" style="display: inline;">
+                                <button type="submit" class="btn small danger"
+                                        onclick="return confirm('{{ t('delete_confirm_folder') }}')"
+                                        title="{{ t('tooltip_delete_folder') }}">🗑️ Xóa folder</button>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <h1>{{ t('all_notes') }}</h1>
+                {% endif %}
+
+                {% if selected_folder %}
+                <form action="{{ url_for('add_note') }}" method="post" class="add-form">
+                    <input type="hidden" name="folder_id" value="{{ selected_folder }}">
+                    <input type="text" name="title" placeholder="{{ t('create_note_placeholder') }}" required class="form-input">
+                    <button type="submit" class="btn" title="{{ t('tooltip_create_note') }}">{{ t('create_note') }}</button>
+                </form>
+
+                <!-- Note sorting controls for current folder -->
+                <div class="note-sort-controls">
+                    <form method="GET" class="note-sort-form">
+                        <input type="hidden" name="folder_id" value="{{ selected_folder }}">
+                        {% if search_query %}
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                        {% endif %}
+                        <div class="note-sort-group">
+                            <label for="note-sort-by">{{ t('sort_by') }} notes:</label>
+                            <select name="sort_by" id="note-sort-by" onchange="this.form.submit()">
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>{{ t('sort_by_name') }}</option>
+                                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>{{ t('sort_by_date') }}</option>
+                            </select>
+                            <select name="sort_order" id="note-sort-order" onchange="this.form.submit()">
+                                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>{{ t('sort_order_asc') }}</option>
+                                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>{{ t('sort_order_desc') }}</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if notes %}
+            <ul class="note-list">
+                {% for note in notes %}
+
+                <li class="note-card {% if note[3] %}pinned{% endif %}" onclick="window.location.href='{{ url_for('view_note', note_id=note[0]) }}'">
+                    <div class="note-title">{{ note[1] or t('untitled') }}</div>
+                    <div class="inline-actions">
+                        <button onclick="event.stopPropagation(); openReminderModal({{ note[0] }})"
+                                class="btn small secondary" title="Đặt nhắc nhở">🔔</button>
+                        <button onclick="event.stopPropagation(); openShareModal({{ note[0] }})"
+                                class="btn small secondary" title="{{ t('share_note') }}">📤</button>
+                        <a href="{{ url_for('edit_note', note_id=note[0]) }}"
+                           onclick="event.stopPropagation()"
+                           class="btn small secondary" title="{{ t('tooltip_edit_note') }}">✏️</a>
+                        <form action="{{ url_for('delete_note', note_id=note[0]) }}" method="post" style="display: inline;">
+                            <button type="submit" class="btn small danger"
+                                    onclick="return confirm('{{ t('delete_confirm_note') }}')"
+                                    title="{{ t('tooltip_delete_note') }}">🗑️</button>
+                        </form>
+                        <button type="button"
+                                class="pin-btn {% if note[3] %}active{% endif %}"
+                                onclick="event.stopPropagation(); toggleNotePin({{ note[0] }}, this)"
+                                title="{{ 'Bỏ ghim ghi chú' if note[3] else 'Ghim ghi chú' }}">
+                            📌
+                        </button>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div style="text-align: center; color: var(--text-muted); padding: var(--spacing-xl);">
+                <p>{{ t('no_notes') }}</p>
+                <p style="font-size: 0.875rem; margin-top: var(--spacing-sm);">{{ t('no_notes_subtitle') }}</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ t('settings') }}</h3>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label class="setting-label">{{ t('theme') }}</label>
+                        <div class="setting-options">
+                            <button class="setting-option {{ 'active' if current_theme == 'light' else '' }}"
+                                    onclick="switchToTheme('light')">
+                                ☀️ {{ t('light_mode') }}
+                            </button>
+                            <button class="setting-option {{ 'active' if current_theme == 'dark' else '' }}"
+                                    onclick="switchToTheme('dark')">
+                                🌙 {{ t('dark_mode') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">{{ t('language') }}</label>
+                        <div class="setting-options">
+                            <a href="{{ url_for('set_language', language='vi') }}"
+                               class="setting-option {{ 'active' if current_language == 'vi' else '' }}">
+                                🇻🇳 {{ t('vietnamese') }}
+                            </a>
+                            <a href="{{ url_for('set_language', language='en') }}"
+                               class="setting-option {{ 'active' if current_language == 'en' else '' }}">
+                                🇺🇸 {{ t('english') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="app-info">
+                    <h4 style="margin-bottom: var(--spacing-md); color: var(--text-primary);">{{ t('app_info') }}</h4>
+                    <div class="app-info-item">
+                        <span class="app-info-label">{{ t('version') }}</span>
+                        <span class="app-info-value">36.36.36</span>
+                    </div>
+                    <div class="app-info-item">
+                        <span class="app-info-label">{{ t('author') }}</span>
+                        <span class="app-info-value">12Group, Inc.</span>
+                    </div>
+                    <div class="app-info-item">
+                        <span class="app-info-label">{{ t('description') }}</span>
+                        <span class="app-info-value">{{ t('app_description') }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn secondary" onclick="closeSettings()">{{ t('close') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ t('share_modal_title') }}</h3>
+                <button class="modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                    Tạo mã chia sẻ để người khác có thể nhập ghi chú này vào ứng dụng của họ.
+                </p>
+                <button class="btn" onclick="generateShareCode()">{{ t('generate_share_code') }}</button>
+                <input type="text" id="share-code-input" class="share-code-input"
+                       placeholder="Mã chia sẻ sẽ xuất hiện ở đây..." readonly>
+            </div>
+            <div class="modal-footer">
+                <button class="btn secondary copy-btn" onclick="copyShareCode()">
+                    📋 {{ t('copy_share_code') }}
+                </button>
+                <button class="btn secondary" onclick="closeShareModal()">{{ t('close') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ t('import_modal_title') }}</h3>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form class="import-form" action="/import_note" method="post">
+                    <input type="text" name="share_code" id="import-code-input"
+                           placeholder="{{ t('import_note_placeholder') }}" required>
+                    {% if selected_folder %}
+                    <input type="hidden" name="folder_id" value="{{ selected_folder }}">
+                    {% endif %}
+                    <div class="modal-footer">
+                        <button type="submit" class="btn">{{ t('import_note_btn') }}</button>
+                        <button type="button" class="btn secondary" onclick="closeImportModal()">{{ t('cancel') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="reminder-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Đặt lời nhắc cho ghi chú</h3>
+            <button class="modal-close" onclick="closeReminderModal()">&times;</button>
+        </div>
+        <form id="reminder-form">
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                    Hệ thống sẽ gửi một email nhắc nhở về ghi chú này.
+                </p>
+                <input type="hidden" id="reminder-note-id" name="note_id">
+
+                <label for="reminder-email" style="display: block; margin-bottom: 5px;">Email nhận thông báo:</label>
+                <input type="email" name="email" id="reminder-email" class="form-input"
+                       placeholder="Nhập email của bạn..." value="{{ current_user.email }}" required>
+
+                <label for="reminder-time" style="display: block; margin-top: 15px; margin-bottom: 5px;">Thời gian nhắc:</label>
+                <input type="datetime-local" name="reminder_time" id="reminder-time" class="form-input" required>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn">Đặt lời nhắc</button>
+                <button type="button" class="btn secondary" onclick="closeReminderModal()">Hủy</button>
+            </div>
+        </form>
+    </div>
+</div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Add these functions to handle pinning
+        function toggleFolderPin(folderId, button) {
+            const isPinned = button.classList.contains('active');
+            const url = isPinned ? `/unpin_folder/${folderId}` : `/pin_folder/${folderId}`;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const folderItem = button.closest('.folder-item');
+                    folderItem.classList.toggle('pinned');
+                    button.classList.toggle('active');
+                    button.title = isPinned ? 'Ghim thư mục' : 'Bỏ ghim thư mục';
+
+                    // Move pinned folders to top
+                    const folderList = document.querySelector('.folder-list');
+                    const folders = Array.from(folderList.children);
+                    folders.sort((a, b) => {
+                        const aPinned = a.classList.contains('pinned');
+                        const bPinned = b.classList.contains('pinned');
+                        return bPinned - aPinned;
+                    });
+                    folderList.append(...folders);
+                }
+            });
+        }
+
+        function toggleNotePin(noteId, button) {
+            const isPinned = button.classList.contains('active');
+            const url = isPinned ? `/unpin_note/${noteId}` : `/pin_note/${noteId}`;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const noteCard = button.closest('.note-card');
+                    noteCard.classList.toggle('pinned');
+                    button.classList.toggle('active');
+                    button.title = isPinned ? 'Ghim ghi chú' : 'Bỏ ghim ghi chú';
+
+                    // Move pinned notes to top
+                    const notesList = document.querySelector('.note-list'); // <-- fixed selector
+                    const notes = Array.from(notesList.children);
+                    notes.sort((a, b) => {
+                        const aPinned = a.classList.contains('pinned');
+                        const bPinned = b.classList.contains('pinned');
+                        return bPinned - aPinned;
+                    });
+                    notesList.append(...notes);
+                }
+            });
+        }
+
+        // Existing scripts...
+    </script>
+</body>
+</html>

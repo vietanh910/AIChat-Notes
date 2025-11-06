@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ t('login') }} - {{ t('app_name') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app_styles.css') }}" />
+  <style>
+    body {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .auth-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card-bg);
+      padding: 48px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px rgba(15, 15, 15, 0.1);
+      border: 1px solid var(--border);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .auth-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .auth-subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .welcome-message {
+      background: var(--primary-light);
+      border: 1px solid rgba(35, 131, 226, 0.2);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    .language-switcher {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .lang-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: white;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 12px;
+      transition: var(--transition);
+    }
+
+    .lang-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="language-switcher">
+    <a href="{{ url_for('set_language', language='vi') }}"
+       class="lang-btn {{ 'active' if current_language == 'vi' else '' }}">VI</a>
+    <a href="{{ url_for('set_language', language='en') }}"
+       class="lang-btn {{ 'active' if current_language == 'en' else '' }}">EN</a>
+  </div>
+
+  <header class="topbar">
+    <a href="{{ url_for('login') }}" class="brand" style="text-decoration: none; color: inherit; cursor: pointer;" title="{{ t('tooltip_login') }}">📝 {{ t('app_name') }}</a>
+    <nav class="topnav">
+      <a class="btn secondary" href="{{ url_for('register') }}" title="{{ t('register') }}">{{ t('register') }}</a>
+    </nav>
+  </header>
+
+  <div class="flash-area">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-card fade-in">
+      <div class="auth-header">
+        <h1 class="auth-title">👋 {{ t('welcome_back') }}</h1>
+        <p class="auth-subtitle">{{ t('login_subtitle') }}</p>
+      </div>
+
+      <form action="{{ url_for('login') }}" method="post">
+        <div class="form-group">
+          <label class="form-label" for="username">{{ t('username') }}</label>
+          <input id="username" name="username" type="text" class="form-input" required
+                 placeholder="{{ t('username_placeholder') }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">{{ t('password') }}</label>
+          <input id="password" name="password" type="password" class="form-input" required
+                 placeholder="{{ t('password_placeholder') }}" />
+        </div>
+        <div class="btn-group" style="border: none; padding: 0; background: none; margin-top: 32px;">
+          <button class="btn" type="submit" style="width: 100%; justify-content: center;">
+            🚀 {{ t('login') }}
+          </button>
+        </div>
+      </form>
+
+      <div style="text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+        <span style="color: var(--text-secondary); font-size: 14px;">{{ t('no_account') }} </span>
+        <a href="{{ url_for('register') }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+          {{ t('register_now') }}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Smooth fade-in animation
+      const card = document.querySelector('.auth-card');
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(30px)';
+
+      setTimeout(() => {
+        card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 100);
+
+      // Focus first input
+      document.getElementById('username').focus();
+
+      // Add input animations
+      const inputs = document.querySelectorAll('.form-input');
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.style.transform = 'scale(1.02)';
+          this.style.boxShadow = '0 4px 20px rgba(35, 131, 226, 0.15)';
+        });
+        input.addEventListener('blur', function() {
+          this.style.transform = 'scale(1)';
+          this.style.boxShadow = '';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

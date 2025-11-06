@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}" data-theme="{{ current_theme }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ t('edit_note') }} - {{ t('app_name') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_styles.css') }}" />
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+    <style>
+      .editor-container {
+        position: relative;
+      }
+
+      .upload-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(102, 126, 234, 0.1);
+        border: 2px dashed var(--accent-primary);
+        border-radius: var(--radius-md);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(2px);
+      }
+
+      .upload-overlay.show {
+        display: flex;
+      }
+
+      .upload-message {
+        background: var(--bg-elevated);
+        padding: 24px;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        text-align: center;
+        color: var(--accent-primary);
+        font-weight: 600;
+        border: 1px solid var(--border-default);
+      }
+
+      .media-toolbar {
+        display: flex;
+        gap: 8px;
+        padding: 12px 32px;
+        border-bottom: 1px solid var(--border-subtle);
+        background: var(--bg-secondary);
+      }
+
+      .media-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        font-size: 13px;
+        cursor: pointer;
+        transition: var(--transition-default);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .media-btn:hover {
+        border-color: var(--accent-primary);
+        background: var(--hover-default);
+      }
+
+      .media-btn input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .progress-bar {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--accent-primary);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+        z-index: 1001;
+      }
+
+      .progress-bar.show {
+        transform: scaleX(1);
+      }
+
+      /* Quill Editor Dark Mode */
+      [data-theme="dark"] .ql-toolbar {
+        background: var(--dark-bg-surface);
+        border-color: var(--dark-border-default);
+      }
+
+      [data-theme="dark"] .ql-container {
+        background: var(--dark-bg-elevated);
+        border-color: var(--dark-border-default);
+      }
+
+      [data-theme="dark"] .ql-editor {
+        color: var(--dark-text-primary);
+      }
+
+      [data-theme="dark"] .ql-toolbar .ql-stroke {
+        stroke: var(--dark-text-primary);
+      }
+
+      [data-theme="dark"] .ql-toolbar .ql-fill {
+        fill: var(--dark-text-primary);
+      }
+
+      [data-theme="dark"] .ql-toolbar button:hover {
+        background: var(--dark-hover-default);
+      }
+
+      [data-theme="dark"] .ql-toolbar button.ql-active {
+        background: var(--dark-accent-primary);
+      }
+
+      /* Content Card Dark Mode */
+      [data-theme="dark"] .content-card {
+        background: var(--dark-bg-elevated);
+        border-color: var(--dark-border-default);
+      }
+
+      /* Ensure images scale nicely inside editor */
+      .ql-editor img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      /* Make the editor area shorter (giấy ghi chú ngắn lại) */
+      .ql-editor {
+        min-height: 35vh; /* giảm còn 35% chiều cao màn hình */
+        max-height: calc(100vh - 350px); /* chừa nhiều chỗ hơn cho nút bên dưới */
+        overflow-y: auto;
+        padding: 1rem 1.25rem;
+        box-sizing: border-box;
+      }
+
+      /* Larger screens: vẫn ngắn hơn trước */
+      @media (min-width: 900px) {
+        .ql-editor { min-height: 40vh; max-height: calc(100vh - 300px); }
+      }
+
+      /* Small screens: giữ hợp lý, vẫn ngắn hơn */
+      @media (max-width: 599px) {
+        .ql-editor { min-height: 30vh; max-height: calc(100vh - 220px); }
+      }
+
+      /* Quill size picker: show numeric sizes instead of 'Normal' */
+      .ql-snow .ql-picker.ql-size .ql-picker-label:not([data-value])::before {
+        content: '12pt';
+      }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="8px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="8px"]::before { content: '8'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="10px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10px"]::before { content: '10'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="12px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12px"]::before { content: '12'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="14px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14px"]::before { content: '14'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="18px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before { content: '18'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { content: '24'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36px"]::before,
+      .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { content: '36'; font-size: 14px; }
+      .ql-snow .ql-picker.ql-size .ql-picker-options { max-height: 300px; overflow-y: auto; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="{{ url_for('index') }}" class="brand" style="text-decoration: none; color: inherit; cursor: pointer;" title="{{ t('tooltip_home') }}">📝 {{ t('app_name') }}</a>
+      <nav class="topnav">
+        <span class="welcome">{{ t('welcome_back') }}, {{ current_user.username }}</span>
+        <a class="btn secondary" href="{{ url_for('logout') }}" title="{{ t('tooltip_logout') }}">{{ t('logout') }}</a>
+      </nav>
+    </header>
+
+    <div class="flash-area">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="content-card">
+      <form id="edit-form" action="{{ url_for('edit_note', note_id=note_id) }}" method="post">
+        <div class="form-group" style="padding: 32px 32px 0 32px;">
+          <input type="text" id="title" name="title" value="{{ title }}" required class="form-input"
+                 placeholder="{{ t('untitled') }}" style="border: none; font-size: 36px; font-weight: 700; padding: 0; background: transparent; color: var(--text-primary);" />
+        </div>
+
+        <div class="media-toolbar">
+          <label class="media-btn" title="{{ t('tooltip_add_image') }}">
+            📷 {{ t('add_image') }}
+            <input type="file" accept="image/*" id="imageInput" />
+          </label>
+        </div>
+
+        <div class="editor-container">
+          <input type="hidden" name="content" />
+          <div id="editor-container">{{ content|safe }}</div>
+          <div class="upload-overlay" id="uploadOverlay">
+            <div class="upload-message">
+              <div>📁 {{ t('drop_images_here') or 'Drop images here to upload' }}</div>
+              <small>{{ t('supports_images_only') or 'Supports images only' }}</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn" title="{{ t('tooltip_save') }}">💾 {{ t('save_changes') }}</button>
+          <a href="{{ url_for('view_note', note_id=note_id) }}" class="btn secondary" title="{{ t('tooltip_cancel') }}">{{ t('cancel') }}</a>
+        </div>
+      </form>
+    </div>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <!-- Image resize plugin for Quill -->
+    <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+    <script>
+      // Register image resize module before initializing Quill (support different UMD builds)
+      if (window.Quill) {
+        const ImageResizeMod = (window.ImageResize && (window.ImageResize.default || window.ImageResize)) || window.QuillImageResizeModule;
+        if (ImageResizeMod) {
+          Quill.register('modules/imageResize', ImageResizeMod);
+        }
+        // Register size attributor to allow px values in toolbar
+        const Size = Quill.import('attributors/style/size');
+        Size.whitelist = ['8px','10px','12px','14px','18px','24px','36px'];
+        Quill.register(Size, true);
+      }
+
+      // Initialize Quill with enhanced toolbar + image resizing
+      const quill = new Quill("#editor-container", {
+        theme: "snow",
+        placeholder: "{{ t('start_writing') }}",
+        modules: {
+          toolbar: [
+            [{ header: [1, 2, 3, false] }],
+            [{ size: ['8px','10px','12px','14px','18px','24px','36px'] }],
+            ["bold", "italic", "underline", "strike"],
+            [{ color: [] }, { background: [] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            [{ align: [] }],
+            ["blockquote", "code-block"],
+            ["link"],
+            ["clean"]
+          ],
+          imageResize: true
+        }
+      });
+
+      // Progress bar element (single definition)
+      const progressBar = document.getElementById('progressBar');
+      function showProgress() { progressBar.classList.add('show'); }
+      function hideProgress() { progressBar.classList.remove('show'); }
+
+      // Upload function - images only (single definition)
+      async function uploadFile(file) {
+        console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size);
+        const formData = new FormData();
+        formData.append('file', file);
+        showProgress();
+        try {
+          const response = await fetch('/upload_image', { method: 'POST', body: formData, credentials: 'same-origin' });
+          console.log('Response status:', response.status, 'redirected:', response.redirected, 'url:', response.url);
+
+          const ct = response.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            const text = await response.text();
+            console.warn('Non-JSON response for upload:', text.slice(0, 200));
+            alert('Phiên đăng nhập có thể đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.');
+            return;
+          }
+
+          const result = await response.json();
+          if (!response.ok) {
+            alert('{{ t("upload_failed") }}: ' + (result.error || 'Unknown error'));
+            return;
+          }
+
+          if (result.url) {
+            const range = quill.getSelection() || { index: quill.getLength() };
+            quill.insertEmbed(range.index, 'image', result.url);
+            quill.setSelection(range.index + 1);
+          } else {
+            alert('{{ t("upload_failed") }}: No URL returned');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('{{ t("upload_failed") }}: ' + error.message);
+        } finally { hideProgress(); }
+      }
+
+      // Unwrap legacy wrappers from previous custom resizer implementation
+      function unwrapLegacyImageWrappers() {
+        const wrappers = document.querySelectorAll('#editor-container .resizable-image-wrapper');
+        wrappers.forEach(w => {
+          const img = w.querySelector('img');
+          if (!img) return;
+          // Preserve size if set
+          const styleWidth = img.style.width;
+          const styleHeight = img.style.height;
+          w.parentNode.replaceChild(img, w);
+          if (styleWidth) img.style.width = styleWidth;
+          if (styleHeight) img.style.height = styleHeight;
+        });
+      }
+
+      // Run unwrap after editor init and after paste/content changes
+      unwrapLegacyImageWrappers();
+      quill.on('text-change', function() {
+        // defer to allow DOM to update
+        setTimeout(unwrapLegacyImageWrappers, 0);
+      });
+
+
+      // Image upload handler
+      document.getElementById('imageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) uploadFile(file);
+        e.target.value = '';
+      });
+
+
+      // Drag and drop for images only
+      const editorContainer = document.querySelector('.editor-container');
+      const uploadOverlay = document.getElementById('uploadOverlay');
+      let dragCounter = 0;
+      ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+        editorContainer.addEventListener(evt, preventDefaults, false);
+        document.body.addEventListener(evt, preventDefaults, false);
+      });
+      function preventDefaults(e){ e.preventDefault(); e.stopPropagation(); }
+      ;['dragenter','dragover'].forEach(evt => editorContainer.addEventListener(evt, () => { dragCounter++; uploadOverlay.classList.add('show'); }, false));
+      ;['dragleave','drop'].forEach(evt => editorContainer.addEventListener(evt, () => { dragCounter--; if(dragCounter===0) uploadOverlay.classList.remove('show'); }, false));
+      editorContainer.addEventListener('drop', (e) => {
+        dragCounter = 0; uploadOverlay.classList.remove('show');
+        const files = e.dataTransfer.files;
+        [...files].forEach(file => { if (file.type.startsWith('image/')) uploadFile(file); });
+      }, false);
+
+      // Submit form: put HTML into hidden input
+      document.getElementById("edit-form").onsubmit = function() {
+        document.querySelector("input[name=content]").value = quill.root.innerHTML;
+      };
+
+      // Focus editor on load
+      window.addEventListener('load', function(){ quill.focus(); });
+
+      // After Quill init: keep size picker in sync with caret/selection
+      function syncSizePicker() {
+        const pickerLabel = document.querySelector('.ql-toolbar .ql-size .ql-picker-label');
+        const items = document.querySelectorAll('.ql-toolbar .ql-size .ql-picker-item');
+        if (!pickerLabel) return;
+        const range = quill.getSelection();
+        if (!range) return;
+
+        const whitelist = ['8px','10px','12px','14px','18px','24px','36px'];
+        const format = quill.getFormat(range);
+        let size = format.size; // e.g., '12px' or undefined
+
+        if (!size) {
+          // No explicit format; detect computed size of current leaf DOM node
+          try {
+            const leaf = quill.getLeaf(range.index);
+            const node = leaf && leaf[0] && leaf[0].domNode;
+            if (node) {
+              const computed = window.getComputedStyle(node).fontSize; // e.g., '16px'
+              if (computed) {
+                if (whitelist.includes(computed)) {
+                  size = computed;
+                } else {
+                  // Pick nearest size from whitelist
+                  const comp = parseFloat(computed);
+                  let nearest = whitelist[0];
+                  let best = Math.abs(parseFloat(nearest) - comp);
+                  for (const s of whitelist) {
+                    const diff = Math.abs(parseFloat(s) - comp);
+                    if (diff < best) { best = diff; nearest = s; }
+                  }
+                  size = nearest;
+                }
+              }
+            }
+          } catch (e) { /* ignore */ }
+        }
+
+        if (!size) {
+          pickerLabel.removeAttribute('data-value');
+          items.forEach(it => it.classList.remove('ql-selected'));
+          return;
+        }
+
+        pickerLabel.setAttribute('data-value', size);
+        items.forEach(it => {
+          if (it.getAttribute('data-value') === size) it.classList.add('ql-selected');
+          else it.classList.remove('ql-selected');
+        });
+      }
+
+      quill.on('selection-change', function() {
+        // Defer until Quill updates formats
+        setTimeout(syncSizePicker, 0);
+      });
+      quill.on('text-change', function() {
+        setTimeout(syncSizePicker, 0);
+      });
+      // Initial sync
+      setTimeout(syncSizePicker, 0);
+    </script>
+  </body>
+</html>

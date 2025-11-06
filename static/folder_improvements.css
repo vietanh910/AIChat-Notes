@@ -1,0 +1,472 @@
+/* Folder item improvements */
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    border: 1px solid transparent;
+    min-width: 0;
+    overflow: hidden; /* Prevent any overflow */
+}
+
+.folder-item:hover {
+    background: var(--hover-subtle);
+    transform: translateX(2px);
+    border: 1px solid var(--border-default);
+}
+
+.folder-link {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-width: 0;
+    max-width: calc(100% - 50px); /* Reserve space for delete button */
+    overflow: hidden; /* Critical: prevent text overflow */
+    overflow: visible !important; /* override earlier hidden to let pin show */
+}
+
+.folder-link:hover {
+    background: var(--hover-default);
+    font-weight: var(--font-weight-semibold);
+    border: 1px solid var(--border-default);
+}
+
+.folder-link.active {
+    background: var(--hover-default);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-sm);
+}
+
+.folder-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 1.25rem; /* larger folder emoji/icon */
+    line-height: 1;
+}
+
+/* Small overlay pin indicator (non-interactive) shown when folder is pinned */
+.folder-pin-indicator {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 0.85rem;
+    line-height: 1;
+    pointer-events: none; /* indicator is not clickable */
+    background: transparent;
+    display: none; /* hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* Show indicator when the folder-item has pinned class */
+.folder-item.pinned .folder-pin-indicator {
+    display: inline-flex;
+}
+
+/* Small circular pin button that sits on the folder icon */
+.folder-pin-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    transform: translate(0, 0);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    padding: 2px 6px;
+    font-size: 0.85rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    opacity: 0.95;
+}
+
+.folder-pin-btn:hover {
+    opacity: 1;
+}
+
+.folder-pin-btn.active {
+    background: linear-gradient(90deg, rgba(255,248,225,1), rgba(255,242,204,1));
+    border-color: #ffcc80;
+    color: #ff9800;
+}
+
+.folder-edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+}
+
+.folder-edit-form {
+    flex: 1;
+    margin-right: var(--spacing-md);
+}
+
+.folder-edit-input {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    transition: all var(--transition-fast);
+    font-family: inherit;
+}
+
+.folder-edit-input:hover {
+    border: 1px solid var(--border-strong);
+    background: var(--hover-subtle);
+}
+
+.folder-edit-input:focus {
+    outline: none;
+    border: 1px solid var(--accent-primary);
+    background: var(--bg-elevated);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.folder-actions-main {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.folder-name {
+    flex: 1;
+    cursor: inherit;
+    padding: 0;
+    border-radius: 0;
+    transition: none;
+    display: block;
+    min-width: 0;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    /* Enhanced text overflow handling - CRITICAL */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    word-break: break-all; /* Break long words */
+}
+
+.folder-name:hover {
+    background: transparent;
+    color: inherit;
+    transform: none;
+}
+
+/* Search box for folders */
+.folder-search {
+    position: relative;
+    margin-bottom: var(--spacing-md);
+}
+
+.folder-search-input {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 2.5rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+}
+
+.folder-search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-primary-alpha, rgba(102,126,234,0.12));
+}
+
+.folder-search-icon {
+    position: absolute;
+    left: var(--spacing-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+/* Hidden class for search filtering */
+.folder-item.hidden {
+    display: none;
+}
+
+/* Dark mode improvements for settings */
+[data-theme="dark"] .setting-option.active {
+    background: var(--dark-hover-default);
+    color: var(--dark-text-primary);
+    border: 1px solid var(--dark-border-strong);
+    font-weight: var(--font-weight-bold);
+    box-shadow: var(--dark-shadow-md);
+}
+
+/* Remove folder name hover effects */
+.folder-name {
+    cursor: inherit;
+    padding: 0;
+    border-radius: 0;
+    transition: none;
+    display: inline;
+    min-width: auto;
+    flex: none;
+}
+
+.folder-name:hover {
+    background: transparent;
+    color: inherit;
+    transform: none;
+}
+
+/* Enhanced note card hover effects */
+.note-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-default);
+    cursor: pointer;
+    position: relative;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+}
+
+.note-card:hover {
+    background: var(--hover-subtle);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px) scale(1.02);
+}
+
+.note-card:hover .note-title {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
+    font-size: 1.1rem;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Note formatting features on hover */
+.note-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg,
+        rgba(102, 126, 234, 0.02),
+        rgba(118, 75, 162, 0.02),
+        rgba(102, 126, 234, 0.02));
+    opacity: 0;
+    transition: opacity var(--transition-default);
+    border-radius: var(--radius-lg);
+    pointer-events: none;
+}
+
+.note-card:hover::after {
+    opacity: 1;
+}
+
+/* Dark mode note card improvements */
+[data-theme="dark"] .note-card:hover {
+    background: var(--dark-hover-default);
+    border: 1px solid var(--dark-border-strong);
+    box-shadow: var(--dark-shadow-lg);
+    transform: translateY(-4px) scale(1.02);
+}
+
+[data-theme="dark"] .note-card:hover .note-title {
+    color: var(--dark-text-primary);
+    font-weight: var(--font-weight-bold);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .note-card::after {
+    background: linear-gradient(135deg,
+        rgba(129, 161, 230, 0.05),
+        rgba(159, 122, 234, 0.05),
+        rgba(129, 161, 230, 0.05));
+}
+
+/* Sort controls styling */
+.sort-controls {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+}
+
+.sort-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.sort-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.sort-group label {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    min-width: 70px;
+}
+
+.sort-group select {
+    flex: 1;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+}
+
+.sort-group select:hover {
+    border-color: var(--border-strong);
+}
+
+.sort-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-primary-alpha, rgba(102,126,234,0.12));
+}
+
+/* Folder actions positioning */
+.folder-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-left: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+/* Better hover effects for folder items */
+.folder-item:hover .folder-actions {
+    opacity: 1;
+}
+
+.folder-actions {
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+/* Ensure proper spacing and alignment */
+.folder-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.folder-list li {
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Note sorting controls in main content */
+.note-sort-controls {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+}
+
+.note-sort-form {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.note-sort-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.note-sort-group label {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.note-sort-group select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+    min-width: 100px;
+}
+
+.note-sort-group select:hover {
+    border-color: var(--border-strong);
+}
+
+.note-sort-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-primary-alpha, rgba(102,126,234,0.12));
+}
+
+/* Dark mode support for note sorting */
+[data-theme="dark"] .note-sort-controls {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border-default);
+}
+
+[data-theme="dark"] .note-sort-group select {
+    background: var(--dark-bg-primary);
+    color: var(--dark-text-primary);
+    border-color: var(--dark-border-default);
+}
+
+[data-theme="dark"] .note-sort-group select:hover {
+    border-color: var(--dark-border-strong);
+}
+
+[data-theme="dark"] .note-sort-group label {
+    color: var(--dark-text-secondary);
+}

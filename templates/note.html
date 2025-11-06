@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} - {{ t('app_name') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_styles.css') }}" />
+    <style>
+      .note-content {
+        line-height: 1.6;
+        font-size: 16px;
+        color: var(--text-primary);
+        background: var(--bg-elevated);
+        padding: 20px;
+        border-radius: var(--radius-md);
+        min-height: 300px;
+        border: 1px solid var(--border-subtle);
+      }
+
+      .note-content h1, .note-content h2, .note-content h3 {
+        margin-top: 24px;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      .note-content p {
+        margin-bottom: 16px;
+        color: var(--text-primary);
+      }
+
+      .note-content table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 16px 0 !important;
+        border: 2px solid var(--border-default) !important;
+        font-family: Arial, sans-serif !important;
+        display: table !important;
+        background: var(--bg-surface) !important;
+      }
+
+      .note-content thead {
+        display: table-header-group !important;
+      }
+
+      .note-content tbody {
+        display: table-row-group !important;
+      }
+
+      .note-content tr {
+        display: table-row !important;
+      }
+
+      .note-content th,
+      .note-content td {
+        display: table-cell !important;
+        border: 1px solid var(--border-default) !important;
+        padding: 8px 12px !important;
+        text-align: left !important;
+        vertical-align: top !important;
+        min-width: 80px !important;
+        color: var(--text-primary) !important;
+      }
+
+      .note-content th {
+        font-weight: bold !important;
+        background: var(--accent-primary) !important;
+        color: white !important;
+        text-align: center !important;
+      }
+
+      .note-content tbody tr:nth-child(even) {
+        background: var(--bg-secondary) !important;
+      }
+
+      .note-content tbody tr:nth-child(odd) {
+        background: var(--bg-elevated) !important;
+      }
+
+      .note-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-md);
+        margin: 16px 0;
+      }
+
+      .note-content blockquote {
+        border-left: 4px solid var(--accent-primary);
+        padding-left: 16px;
+        margin: 16px 0;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+
+      .note-content code {
+        background: var(--bg-surface);
+        padding: 2px 6px;
+        border-radius: var(--radius-sm);
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+      }
+
+      .note-content pre {
+        background: var(--bg-surface);
+        padding: 16px;
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+        margin: 16px 0;
+        border: 1px solid var(--border-default);
+      }
+
+      .note-content pre code {
+        background: none;
+        padding: 0;
+      }
+
+      .note-content ul, .note-content ol {
+        margin: 16px 0;
+        padding-left: 24px;
+        color: var(--text-primary);
+      }
+
+      .note-content li {
+        margin-bottom: 8px;
+      }
+
+      .note-content a {
+        color: var(--accent-primary);
+        text-decoration: none;
+      }
+
+      .note-content a:hover {
+        text-decoration: underline;
+      }
+
+      /* Chat widget styles */
+      .chat-toggle-btn {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 1100;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: 999px;
+        padding: 12px 16px;
+        box-shadow: var(--shadow-md);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+      .chat-toggle-btn:hover { filter: brightness(0.95); }
+
+      .chat-panel {
+        position: fixed;
+        right: 24px;
+        bottom: 88px;
+        width: 380px;
+        max-height: 70vh;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 1099;
+      }
+      .chat-panel.show { display: flex; }
+      .chat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-subtle);
+        background: var(--bg-secondary);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .chat-messages {
+        padding: 12px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: var(--bg-elevated);
+      }
+      .msg { max-width: 85%; padding: 10px 12px; border-radius: 12px; white-space: pre-wrap; }
+      .msg.user { align-self: flex-end; background: var(--accent-primary); color: white; border-bottom-right-radius: 4px; }
+      .msg.bot { align-self: flex-start; background: var(--bg-surface); color: var(--text-primary); border-bottom-left-radius: 4px; border: 1px solid var(--border-subtle); }
+      .chat-input {
+        display: flex;
+        gap: 8px;
+        padding: 10px;
+        border-top: 1px solid var(--border-subtle);
+        background: var(--bg-secondary);
+      }
+      .chat-input input[type="text"] {
+        flex: 1;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+      }
+      .chat-input button { padding: 8px 12px; border-radius: var(--radius-sm); }
+
+      /* Text selection floating buttons */
+      .text-selection-buttons {
+        position: fixed;
+        display: none;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        padding: 6px;
+        z-index: 1200;
+        white-space: nowrap;
+      }
+
+      .text-selection-buttons button {
+        display: inline-block;
+        padding: 6px 12px;
+        margin: 0 4px;
+        border: none;
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      .text-selection-buttons button:hover {
+        background: var(--accent-primary);
+        color: white;
+      }
+
+      @media (max-width: 480px) {
+        .chat-panel { right: 12px; left: 12px; width: auto; bottom: 84px; }
+        .chat-toggle-btn { right: 12px; bottom: 12px; }
+      }
+
+      /* Dark mode tweaks */
+      [data-theme="dark"] .chat-panel { background: var(--dark-bg-elevated); border-color: var(--dark-border-default); }
+      [data-theme="dark"] .chat-header { background: var(--dark-bg-surface); border-color: var(--dark-border-default); }
+      [data-theme="dark"] .msg.bot { background: var(--dark-bg-surface); border-color: var(--dark-border-default); color: var(--dark-text-primary); }
+      [data-theme="dark"] .chat-input { background: var(--dark-bg-surface); border-color: var(--dark-border-default); }
+      [data-theme="dark"] .chat-input input[type="text"] { background: var(--dark-bg-elevated); color: var(--dark-text-primary); border-color: var(--dark-border-default); }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a href="{{ url_for('index') }}" class="brand" title="{{ t('tooltip_home') }}">
+            📝 {{ t('app_name') }}
+        </a>
+        <nav class="topnav">
+            <span class="welcome">{{ t('welcome_back') }}, {{ current_user.username }}</span>
+            <a class="btn secondary" href="{{ url_for('logout') }}" title="{{ t('tooltip_logout') }}">
+                {{ t('logout') }}
+            </a>
+        </nav>
+    </header>
+
+    <div class="flash-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="content-card">
+        <div class="note-header" style="padding: var(--spacing-lg); border-bottom: 1px solid var(--border-subtle);">
+            <h1 style="font-size: 2rem; font-weight: var(--font-weight-bold); color: var(--text-primary); margin-bottom: var(--spacing-sm);">
+                {{ title or t('untitled') }}
+            </h1>
+            <div class="btn-group" style="display: flex; gap: var(--spacing-sm);">
+                <a href="{{ url_for('edit_note', note_id=note_id) }}" class="btn" title="{{ t('tooltip_edit_note') }}">
+                    ✏️ {{ t('edit') }}
+                </a>
+                <a href="{{ url_for('index', folder_id=folder_id) }}" class="btn secondary" title="{{ t('tooltip_back_list') }}">
+                    ← {{ t('back') }}
+                </a>
+            </div>
+        </div>
+
+        <div class="note-content" style="margin: var(--spacing-lg);">
+            {{ content|safe }}
+        </div>
+    </div>
+
+    <button class="chat-toggle-btn" title="{{ t('tooltip_chat') }}" onclick="toggleChatPanel()">
+      💬 {{ t('chat_with_ai') }}
+    </button>
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>{{ t('chat_with_ai') }}</span>
+        <button class="btn btn-icon" onclick="toggleChatPanel()" title="{{ t('close') }}">❌</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input">
+        <input type="text" id="user-input" placeholder="{{ t('type_your_message') }}" />
+        <button class="btn" id="send-btn" onclick="sendMessage()">{{ t('send') }}</button>
+      </div>
+    </div>
+
+    <!-- Add the floating buttons container -->
+    <div id="text-selection-buttons" class="text-selection-buttons">
+        <button onclick="handleTextAction('explain')">Giải thích</button>
+        <button onclick="handleTextAction('translate')">Dịch</button>
+        <button onclick="handleTextAction('summarize')">Tóm tắt</button>
+    </div>
+
+    <script>
+      function toggleChatPanel() {
+        const panel = document.querySelector('.chat-panel');
+        panel.classList.toggle('show');
+        if (panel.classList.contains('show')) {
+          const messages = document.getElementById('chat-messages');
+          if (!messages.dataset.welcomed) {
+            appendMessage('bot', {{ t('chat_welcome')|tojson }});
+            messages.dataset.welcomed = '1';
+          }
+          panel.querySelector('#user-input').focus();
+        }
+      }
+
+      function sendMessage() {
+        const input = document.getElementById('user-input');
+        const message = input.value.trim();
+        if (!message) return;
+        appendMessage('user', message);
+        input.value = '';
+
+        // Show typing indicator
+        const typingId = appendMessage('bot', '…');
+
+        fetch(`/chat/{{ note_id }}` , {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        })
+        .then(async (response) => {
+          const ct = response.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            throw new Error('Unexpected response. Please reload and login again.');
+          }
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Error');
+          const reply = data.answer || {{ t('error_no_response')|tojson }};
+          replaceMessageText(typingId, reply);
+        })
+        .catch(err => {
+          replaceMessageText(typingId, {{ t('error_sending_message')|tojson }});
+          console.error(err);
+        });
+      }
+
+      function appendMessage(sender, text) {
+        const messagesContainer = document.getElementById('chat-messages');
+        const msgElement = document.createElement('div');
+        msgElement.classList.add('msg', sender);
+        msgElement.textContent = text;
+        const id = 'm' + Date.now() + Math.random().toString(16).slice(2);
+        msgElement.id = id;
+        messagesContainer.appendChild(msgElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return id;
+      }
+
+      function replaceMessageText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      }
+
+      // Enter to send
+      document.addEventListener('keydown', function(e) {
+        const panelShown = document.querySelector('.chat-panel.show');
+        if (!panelShown) return;
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      let selectedText = '';
+
+      // Handle text selection
+      document.addEventListener('mouseup', function(e) {
+          const selection = window.getSelection();
+          selectedText = selection.toString().trim();
+          const buttons = document.getElementById('text-selection-buttons');
+
+          if (selectedText) {
+              const range = selection.getRangeAt(0);
+              const rect = range.getBoundingClientRect();
+
+              // Position buttons below the selection
+              const top = window.scrollY + rect.bottom + 10;
+              const left = window.scrollX + rect.left + (rect.width / 2);
+
+              buttons.style.display = 'block';
+              buttons.style.top = top + 'px';
+              buttons.style.left = Math.max(10, Math.min(left - buttons.offsetWidth / 2, window.innerWidth - buttons.offsetWidth - 10)) + 'px';
+          } else {
+              // Only hide if we're not clicking the buttons themselves
+              if (!e.target.closest('#text-selection-buttons')) {
+                  buttons.style.display = 'none';
+              }
+          }
+      });
+
+      // Hide buttons when clicking outside
+      document.addEventListener('mousedown', function(e) {
+          if (!e.target.closest('#text-selection-buttons')) {
+              document.getElementById('text-selection-buttons').style.display = 'none';
+          }
+      });
+
+      // Handle action button clicks
+      function handleTextAction(action) {
+          if (!selectedText) return;
+
+          const prompts = {
+              'explain': 'Giải thích đoạn sau: \n',
+              'translate': 'Dịch đoạn sau sang tiếng Việt: \n',
+              'summarize': 'Tóm tắt đoạn sau: \n'
+          };
+
+          // Show chat panel if not visible
+          const panel = document.querySelector('.chat-panel');
+          if (!panel.classList.contains('show')) {
+              toggleChatPanel();
+          }
+
+          // Send message to chat
+          const message = prompts[action] + selectedText;
+          const input = document.getElementById('user-input');
+          input.value = message;
+          sendMessage();
+
+          // Hide the buttons
+          document.getElementById('text-selection-buttons').style.display = 'none';
+      }
+
+      // Update sendMessage function to include selected text context
+      function sendMessage() {
+        const input = document.getElementById('user-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        appendMessage('user', message);
+        input.value = '';
+
+        // Show typing indicator
+        const typingId = appendMessage('bot', '...');
+
+        fetch(`/chat/{{ note_id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                context: selectedText // Include selected text as context
+            })
+        })
+        .then(async (response) => {
+            try {
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                const reply = data.answer || {{ t('error_no_response')|tojson }};
+                replaceMessageText(typingId, reply);
+            } catch (e) {
+                throw new Error('Response error: ' + e.message);
+            }
+        })
+        .catch(err => {
+            console.error('Chat error:', err);
+            replaceMessageText(typingId, '⚠️ ' + (err.message || {{ t('error_sending_message')|tojson }}));
+        });
+      }
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>

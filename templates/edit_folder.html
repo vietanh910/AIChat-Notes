@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Folder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app_styles.css') }}">
+</head>
+<body>
+    <div class="content-card" style="max-width: 500px;">
+        <h1>Edit Folder</h1>
+        <form action="{{ url_for('edit_folder', folder_id=folder_id) }}" method="post">
+            <div class="form-group">
+                <label class="form-label" for="name">Folder Name</label>
+                <input type="text" id="name" name="name" value="{{ folder[0] }}" required class="form-input">
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn">Save Changes</button>
+                <a href="{{ url_for('index') }}" class="btn secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
